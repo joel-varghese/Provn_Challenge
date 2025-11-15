@@ -1,65 +1,199 @@
+"use client";
 import Image from "next/image";
+import { useEffect, useState, useRef } from "react";
+import { useDropzone } from "react-dropzone";
+
+
+type Upload = {
+  id: string;
+  name: string;
+  url: string;
+  fileType: string;
+};
 
 export default function Home() {
+
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [uploads, setUploads] = useState<Upload[]>([]);
+  const [analysis, setAnalysis] = useState({
+    filler: null,
+    pacing: null,
+    clarity: null,
+  });
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+
+  const startAnalysis = async () => {
+    
+      const feedbackRes = await fetch("/api/feedback/");
+      const feedback = await feedbackRes.json();
+      const classifyRes = await fetch("/api/analyze", {
+        method: "POST",
+        body: JSON.stringify({ feedback: feedback.feedback }),
+      })
+
+      const results = await classifyRes.json();
+
+      setAnalysis({
+        filler: results.filler,
+        pacing: results.pacing,
+        clarity: results.clarity,
+      });
+
+      setProgress(1);
+    };
+
+  const jumpTo = (time: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+      videoRef.current.play();
+    }
+  }
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { "image/*": [], "video/*": [] },
+    maxFiles: 1,
+    onDrop: (files) => {
+      const f = files[0];
+      setPreview(URL.createObjectURL(f));
+      setFile(f);
+    },
+  });
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+   <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold">File Upload</h1>
+
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition ${
+            isDragActive
+              ? "border-blue-500 bg-blue-50"
+              : "border-gray-300 bg-white"
+          }`}
+        >
+          <input {...getInputProps()} />
+          {!preview ? (
+            <p className="text-gray-600">
+              Drag and drop or click to select file
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {file?.type.startsWith("image/") ? (
+                <Image
+                  src={preview}
+                  alt="Preview"
+                  width={400}
+                  height={200}
+                  className="max-h-64 mx-auto rounded"
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={preview}
+                  controls
+                  className="max-h-64 mx-auto rounded"
+                />
+              )}
+              <p className="text-sm">{file?.name}</p>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Uploaded Files</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {uploads.map((u) => (
+              <div key={u.id} className="bg-white rounded-lg p-3">
+                {u.fileType.startsWith("image/") ? (
+                  <Image
+                    src={u.url}
+                    alt={u.name}
+                    width={400}
+                    height={200}
+                    className="w-full h-32 object-cover rounded"
+                  />
+                ) : (
+                  <video
+                    src={u.url}
+                    className="w-full h-32 object-cover rounded"
+                  />
+                )}
+                <p className="text-xs mt-2 truncate">{u.name}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
+
+        {progress ? <div className="space-y-4 mt-8 p-4 bg-white rounded shadow">
+          <h2 className="text-xl font-bold">Analysis Results</h2>
+
+            <div>
+              <h3 className="font-semibold">Filler Words</h3>
+              {analysis.filler ? (
+                  <div className="space-y-3">
+                  {analysis.filler.map((item: any, i: number) => (
+                    <div
+                      key={i}
+                      className="p-3 bg-gray-100 rounded cursor-pointer hover:bg-gray-200"
+                      onClick={() => jumpTo(item.timestamp)}
+                    >
+                      <p className="text-sm text-gray-500">At {item.timestamp}s</p>
+                      <p>{item.message}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">Processing filler word analysis…</p>
+              )}
+            </div>
+
+            <div>
+              <h3 className="font-semibold">Pacing</h3>
+              {analysis.pacing ? (
+                  <div className="space-y-3">
+                  {analysis.pacing.map((item: any, i: number) => (
+                    <div
+                      key={i}
+                      className="p-3 bg-gray-100 rounded cursor-pointer hover:bg-gray-200"
+                      onClick={() => jumpTo(item.timestamp)}
+                    >
+                      <p className="text-sm text-gray-500">At {item.timestamp}s</p>
+                      <p>{item.message}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">Processing pacing analysis…</p>
+              )}
+            </div>
+
+            <div>
+              <h3 className="font-semibold">Clarity</h3>
+              {analysis.clarity ? (
+                  <div className="space-y-3">
+                  {analysis.clarity.map((item: any, i: number) => (
+                    <div
+                      key={i}
+                      className="p-3 bg-gray-100 rounded cursor-pointer hover:bg-gray-200"
+                      onClick={() => jumpTo(item.timestamp)}
+                    >
+                      <p className="text-sm text-gray-500">At {item.timestamp}s</p>
+                      <p>{item.message}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">Processing clarity analysis…</p>
+              )}
+            </div>
+          </div> : <></>}
+
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" 
+          onClick={startAnalysis}>Start Analysis</button>
+      </div>
     </div>
-  );
+  )
 }

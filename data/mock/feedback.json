@@ -1,0 +1,42 @@
+{
+    "score": 7.5,
+    "feedback": [
+      {
+        "timestamp": 8.0,
+        "message": "Your opening sentence was slightly rushed, leading to weaker articulation."
+      },
+      {
+        "timestamp": 13.4,
+        "message": "Excellent clarity here — each word was well articulated and easy to understand."
+      },
+      {
+        "timestamp": 20.0,
+        "message": "Mumbling detected toward the end of this section."
+      },
+      {
+        "timestamp": 3.0,
+        "message": "Your pace increased noticeably during this moment."
+      },
+      {
+        "timestamp": 9.5,
+        "message": "Your pace slowed when explaining complex ideas — which is good."
+      },
+      {
+        "timestamp": 17.3,
+        "message": "There’s a sudden spike in pacing here. Try keeping steady momentum."
+      },
+      {
+        "timestamp": 12.5,
+        "message": "You used the filler word 'um' while transitioning between topics. Consider pausing briefly instead."
+      },
+      {
+        "timestamp": 6.7,
+        "message": "The filler phrase 'you know' appeared here. Try removing it to improve clarity."
+      },
+      {
+        "timestamp": 18.0,
+        "message": "Multiple 'uh' sounds were detected during your introduction. Practicing slow pacing might help."
+      }
+    ]
+  }
+  
