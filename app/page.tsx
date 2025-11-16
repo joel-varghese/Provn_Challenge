@@ -18,34 +18,67 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [analysis, setAnalysis] = useState({
-    filler: null,
-    pacing: null,
-    clarity: null,
+    filler: [],
+    pacing: [],
+    clarity: [],
   });
   const videoRef = useRef<HTMLVideoElement>(null);
 
 
   const startAnalysis = async () => {
     
-      const feedbackRes = await fetch("/api/feedback/");
-      const feedback = await feedbackRes.json();
-      const classifyRes = await fetch("/api/analyze", {
-        method: "POST",
-        body: JSON.stringify({ feedback: feedback.feedback }),
-      })
+    const feedbackRes = await fetch("/api/feedback/");
+    const feedback = await feedbackRes.json();
 
-      const results = await classifyRes.json();
+    const feedbackParam = encodeURIComponent(JSON.stringify({ feedback: feedback.feedback }));
+  
+    const evtSource = new EventSource(`/api/analyze?feedback=${feedbackParam}`);
+  
+    let firstItem = true;
+    let done = false;
 
-      setAnalysis({
-        filler: results.filler,
-        pacing: results.pacing,
-        clarity: results.clarity,
-      });
+    evtSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.error) {
+        console.error(data.error);
+        evtSource.close();
+        return;
+      }
+  
+      if (data.done) {
+        done = true;     // <-- mark as normal close
+        evtSource.close();
+        return;
+      }
 
-      setProgress(1);
+      const { category, item } = data;
+  
+      // Set progress to true when the first item arrives
+      if (firstItem) {
+        setProgress(1);
+        firstItem = false;
+      }
+  
+      // Update analysis state incrementally
+      setAnalysis((prev) => ({
+        ...prev,
+        [category]: [...prev[category], item],
+      }));
     };
+  
+    evtSource.onerror = (err) => {
+
+      if (done) return;
+
+      console.error("SSE error", err);
+      evtSource.close();
+    };
+  };
+  
 
   const jumpTo = (time: number) => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     if (videoRef.current) {
       videoRef.current.currentTime = time;
       videoRef.current.play();
